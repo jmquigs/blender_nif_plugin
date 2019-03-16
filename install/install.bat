@@ -9,6 +9,10 @@ set ROOT="%DIR%\.."
 set /p VERSION=<%ROOT%\io_scene_nif\VERSION
 set NAME=blender_nif_plugin
 
+for /f "tokens=1,2 delims==" %%a in (install-config.ini) do (
+if %%a==BLENDER_ADDONS_DIR set BLENDER_ADDONS_DIR=%%b
+)
+
 if "%BLENDER_ADDONS_DIR%" == "" if not exist "%BLENDER_ADDONS_DIR%" (
 echo."Update BLENDER_ADDONS_DIR to the folder where the blender addons reside, such as:"
 echo."set BLENDER_ADDONS_DIR=%APPDATA%\Blender Foundation\Blender\2.79\scripts\addons"
@@ -24,13 +28,13 @@ echo. "%BLENDER_ADDONS_DIR%"\io_scene_nif
 
 :: create zip
 echo. "Building artifact"
-call "%DIR%\makezip.bat"
+call "makezip.bat"
 
 :: remove old files
 echo.Removing old installation
 if exist "%BLENDER_ADDONS_DIR%\io_scene_nif" rmdir /s /q "%BLENDER_ADDONS_DIR%\io_scene_nif"
 
 :: copy files from repository to blender addons folder
-powershell -executionpolicy bypass -Command "%DIR%\unzip.ps1" -source '%DIR%\%NAME%-%VERSION%.zip' -destination '%BLENDER_ADDONS_DIR%\io_scene_nif'
+powershell -executionpolicy bypass -Command "%DIR%\unzip.ps1" -source '%DIR%\%NAME%-%VERSION%.zip' -destination '%BLENDER_ADDONS_DIR%'
 
 :end
