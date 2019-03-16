@@ -38,5 +38,5 @@ xcopy "%ROOT%"\LICENSE.rst io_scene_nif
 xcopy "%ROOT%"\README.rst io_scene_nif
 popd
 
-powershell -executionpolicy bypass -Command "%DIR%\zip.ps1" -source "%DIR%\temp\io_scene_nif" -destination "%DIR%\%NAME%-%VERSION%.zip"
+powershell -executionpolicy bypass -Command "%DIR%\zip.ps1" -source "%DIR%\temp" -destination "%DIR%\%NAME%-%VERSION%.zip"
 rmdir /s /q %DIR%\temp
