@@ -808,7 +808,27 @@ class MeshHelper:
                 f_numverts = len(poly.vertices)
                 if f_numverts < 3:
                     continue  # ignore degenerate polygons
-                assert ((f_numverts == 3) or (f_numverts == 4))  # debug
+                if f_numverts != 3 and f_numverts != 4:
+                    print('strange face, trying to select it; vert count: ', f_numverts)
+                    bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
+
+                    # select mesh object
+                    for b_deselect_obj in bpy.context.scene.objects:
+                        b_deselect_obj.select = False
+                    bpy.context.scene.objects.active = b_obj
+                    b_obj.select = True
+                    # select bad polygons
+                    for face in b_mesh.polygons:
+                        face.select = False
+
+                    poly.select = True
+
+                    bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+
+                    raise ValueError("Bad face detected with {0} vertices, the face should be selected, use dissolve or remove vertices to limit the face to 3 or 4 vertices".format(f_numverts)  )
+
+                assert ((f_numverts == 3) or (f_numverts == 4)) # debug
+
                 if mesh_uv_layers:
                     # if we have uv coordinates double check that we have uv data
                     if not b_mesh.uv_layer_stencil:
@@ -931,6 +951,7 @@ class MeshHelper:
 
             # check that there are no missing body part polygons
             if polygons_without_bodypart:
+                bpy.ops.object.mode_set(mode='OBJECT', toggle=False)
                 # select mesh object
                 for b_deselect_obj in bpy.context.scene.objects:
                     b_deselect_obj.select = False
@@ -938,11 +959,12 @@ class MeshHelper:
                 b_obj.select = True
                 # select bad polygons
                 # switch to edit mode to select polygons
-                bpy.ops.object.mode_set(mode='EDIT', toggle=False)
+
                 for face in b_mesh.polygons:
                     face.select = False
                 for face in polygons_without_bodypart:
                     face.select = True
+                bpy.ops.object.mode_set(mode='EDIT', toggle=False)
                 # raise exception
                 raise ValueError("Some polygons of {0} not assigned to any body part."
                                  "The unassigned polygons have been selected in the mesh so they can easily be identified.".format(b_obj))
