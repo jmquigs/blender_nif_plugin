@@ -1,27 +1,27 @@
 """This script contains helper methods to export objects."""
 
 # ***** BEGIN LICENSE BLOCK *****
-# 
+#
 # Copyright © 2005-2015, NIF File Format Library and Tools contributors.
 # All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
 # are met:
-# 
+#
 #    * Redistributions of source code must retain the above copyright
 #      notice, this list of conditions and the following disclaimer.
-# 
+#
 #    * Redistributions in binary form must reproduce the above
 #      copyright notice, this list of conditions and the following
 #      disclaimer in the documentation and/or other materials provided
 #      with the distribution.
-# 
+#
 #    * Neither the name of the NIF File Format Library and Tools
 #      project nor the names of its contributors may be used to endorse
 #      or promote products derived from this software without specific
 #      prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 # "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 # LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
@@ -111,7 +111,7 @@ class ObjectHelper:
         #          (None, 'MESH', 'EMPTY' or 'ARMATURE')
         # b_obj_anim_data:  object animation ipo
         # node:    contains new NifFormat.NiNode instance
-        
+
         export_types = ('EMPTY', 'MESH', 'ARMATURE')
         if b_obj is None:
             selected_exportable_objects = [b_obj for b_obj in bpy.context.selected_objects if b_obj.type in export_types]
@@ -383,11 +383,11 @@ class ObjectHelper:
     def set_object_matrix(self, b_obj, block):
         """Set a blender object's transform matrix to a NIF object's transformation matrix in rest pose."""
         block.set_transform( self.get_object_matrix(b_obj) )
-        
+
     def get_object_matrix(self, b_obj):
         """Get a blender object's matrix as NifFormat.Matrix44"""
         return self.mathutils_to_nifformat_matrix( self.get_object_bind(b_obj) )
-        
+
     def set_b_matrix_to_n_block(self, b_matrix, block):
         """Set a blender matrix to a NIF object's transformation matrix in rest pose."""
         ### TODO [object] maybe favor this over the above two methods for more flexibility and transparency?
@@ -400,10 +400,10 @@ class ObjectHelper:
         n_matrix = NifFormat.Matrix44()
         n_matrix.set_rows( *b_matrix.transposed() )
         return n_matrix
-        
+
     def get_object_bind(self, b_obj):
         """Get the bind matrix of a blender object.
-        
+
         Returns the final NIF matrix for the given blender object.
         Blender space and axes order are corrected for the NIF.
         Returns a 4x4 mathutils.Matrix()
@@ -419,10 +419,10 @@ class ObjectHelper:
 
             # if there is a bone parent then the object is parented then get the matrix relative to the bone parent head
             if b_obj.parent_bone:
-            
+
                 # first multiply with inverse of the Blender bone matrix
                 parent_bone = b_obj.parent.data.bones[b_obj.parent_bone]
-                
+
                 #undo the calculations from import
                 matrix =  parent_bone.matrix_local.to_3x3().to_4x4() * matrix
                 #but here we add to the X loc instead of Y due to the coordinate changes
@@ -554,6 +554,16 @@ class MeshHelper:
                         'Alpha' in b_mat.animation_data.action.fcurves:
                     mesh_hasalpha = True
 
+                if not mesh_hasalpha:
+                    # if transparency is not in use, the value should be set to 1 in the
+                    # NiMaterialProperty (otherwise the object will be invisible)
+                    mesh_mat_transparency = 1.0
+                elif mesh_mat_transparency < 0.05:
+                    # object will probably be invisible, warn about this.
+                    NifLog.warn("Object has very high transparency, it will probably be invisible.  " +
+                        "Consider checking transparency settings in UI: Material button -> Transparency, and Texture button -> Influence)." +
+                        " If you did not intend the object to be transparent, disable the alpha influence in the diffuse texture.")
+
                 # wire mat
                 mesh_haswire = (b_mat.type == 'WIRE')
 
@@ -638,7 +648,7 @@ class MeshHelper:
             if trishape_name is not None:
                 # only export the bind matrix on trishapes that were not animated
                 self.nif_export.objecthelper.set_object_matrix(b_obj, trishape)
-            
+
             # add textures
             if NifOp.props.game == 'FALLOUT_3':
                 if b_mat:
@@ -657,8 +667,8 @@ class MeshHelper:
                     trishape.bs_properties[num_props] = bsshader
 
                     # trishape.add_property(bsshader)
-                    '''Neomonkeus I had to do this because you still have not merged those changes 
-                    ttl269 made to the xml can you make the effort to contact him and get him to 
+                    '''Neomonkeus I had to do this because you still have not merged those changes
+                    ttl269 made to the xml can you make the effort to contact him and get him to
                     rebase and clear the conflict so it can be merged'''
                     if isinstance(bsshader, NifFormat.BSEffectShaderProperty):
                         effect_control = self.nif_export.objecthelper.create_block("BSEffectShaderPropertyFloatController", bsshader)
@@ -1079,7 +1089,7 @@ class MeshHelper:
                                     vert_norm[v[0]] = v[1]
 
                         # vertices must be assigned at least one vertex group
-                        # lets be nice and display them for the user 
+                        # lets be nice and display them for the user
                         if len(unassigned_verts) > 0:
                             for b_scene_obj in bpy.context.scene.objects:
                                 b_scene_obj.select = False
