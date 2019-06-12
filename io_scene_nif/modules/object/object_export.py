@@ -159,7 +159,7 @@ class ObjectHelper:
         else:
             return None
 
-        has_anim = True if b_obj_anim_data and b_obj_anim_data.action.fcurves else False
+        has_anim = True if b_obj_anim_data and b_obj_anim_data.action and b_obj_anim_data.action.fcurves else False
         if node_name == 'RootCollisionNode':
             # -> root collision node (can be mesh or empty)
             # TODO: do we need to fix this stuff on export?
