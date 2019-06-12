@@ -1186,9 +1186,27 @@ class MeshHelper:
                         if isinstance(skininst, NifFormat.BSDismemberSkinInstance):
                             partitions = skininst.partitions
                             b_obj_part_flags = b_obj.niftools_part_flags
+
+                            # sometimes these flags are missing if the blender file was
+                            # constructed in a way outside of normal import (i.e append or
+                            # from an old file version).  both need to be set for the object
+                            # to show up in game and in the editor, so do so now.  since I'm not
+                            # sure if this is generally a valid thing to do, restricting it
+                            # to games where I know it is needed.
+                            ensure_flags = len(b_obj_part_flags) == 0 and NifOp.props.game in ('FALLOUT_3')
+
                             for s_part in partitions:
                                 s_part_index = NifFormat.BSDismemberBodyPartType._enumvalues.index(s_part.body_part)
                                 s_part_name = NifFormat.BSDismemberBodyPartType._enumkeys[s_part_index]
+
+                                if ensure_flags:
+                                    NifLog.warn("Adding EDITOR and START flags to skin part {0}".format(s_part_name))
+                                    print('add flags for part', s_part_name)
+                                    b_obj_partflag = b_obj.niftools_part_flags.add()
+                                    b_obj_partflag.name = (s_part_name)
+                                    b_obj_partflag.pf_editorflag = True
+                                    b_obj_partflag.pf_startflag = True
+
                                 for b_part in b_obj_part_flags:
                                     if s_part_name == b_part.name:
                                         s_part.part_flag.pf_start_net_boneset = b_part.pf_startflag
