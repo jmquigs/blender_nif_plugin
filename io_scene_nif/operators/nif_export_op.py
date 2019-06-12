@@ -79,7 +79,7 @@ class NifExportOperator(bpy.types.Operator, ExportHelper, NifOperatorCommon):
             ],
         name="Game",
         description="For which game to export.",
-        default='OBLIVION')
+        default='FALLOUT_3')
 
     #: How to export animation.
     animation = bpy.props.EnumProperty(
