@@ -49,7 +49,7 @@ from io_scene_nif.modules import armature
 from io_scene_nif.modules.property.property_export import PropertyHelper
 from io_scene_nif.modules.constraint.constraint_export import constraint_export
 from io_scene_nif.modules.property.texture.texture_export import TextureHelper
-from io_scene_nif.modules.object.object_export import ObjectHelper
+from io_scene_nif.modules.object.object_export import ObjectHelper, remove_stale_automirror_objects
 from io_scene_nif.modules.scene import scene_export
 from io_scene_nif.utility.nif_global import NifOp
 
@@ -69,12 +69,12 @@ class NifExport(NifCommon):
     IDENTITY44.set_identity()
     FLOAT_MIN = -3.4028234663852886e+38
     FLOAT_MAX = +3.4028234663852886e+38
-    
+
     # TODO: - Expose via properties
-    
+
     EXPORT_OPTIMIZE_MATERIALS = True
     EXPORT_OB_COLLISION_DO_NOT_USE_BLENDER_PROPERTIES = False
-    
+
     EXPORT_BHKLISTSHAPE = False
     EXPORT_OB_BSXFLAGS = 2
     EXPORT_OB_MASS = 10.0
@@ -90,7 +90,7 @@ class NifExport(NifCommon):
 
     def __init__(self, operator, context):
         NifCommon.__init__(self, operator)
-    
+
         # Helper systems
         self.bhkshapehelper = bhkshape_export(parent=self)
         self.boundhelper = bound_export(parent=self)
@@ -100,7 +100,7 @@ class NifExport(NifCommon):
         self.constrainthelper = constraint_export(parent=self)
         self.texturehelper = TextureHelper(parent=self)
         self.objecthelper = ObjectHelper(parent=self)
-        
+
     def execute(self):
         """Main export function."""
         if bpy.context.mode != 'OBJECT':
@@ -128,11 +128,13 @@ class NifExport(NifCommon):
         self.dict_materials = {}
         self.dict_textures = {}
         self.dict_mesh_uvlayers = []
-        
+
         # if an egm is exported, this will contain the data
         self.egm_data = None
 
         try:  # catch export errors
+            print("removing automirror objects prior to export")
+            remove_stale_automirror_objects()
 
             for b_obj in bpy.data.objects:
                 # armatures should not be in rest position
@@ -170,7 +172,7 @@ class NifExport(NifCommon):
 
             b_armature = armature.get_armature()
             armature.set_bone_orientation(b_armature.data.niftools_armature.axis_forward, b_armature.data.niftools_armature.axis_up)
-            
+
             root_name = filebase
             # get the root object from selected object
             # only export empties, meshes, and armatures
@@ -194,7 +196,7 @@ class NifExport(NifCommon):
             # smooth seams of objects
             if NifOp.props.smooth_object_seams:
                 self.objecthelper.mesh_helper.smooth_mesh_seams(bpy.context.scene.objects)
-                
+
             # TODO: use Blender actions for animation groups
             # check for animation groups definition in a text buffer 'Anim'
             try:
@@ -236,7 +238,7 @@ class NifExport(NifCommon):
                             n_extra_list.rotation_y = root_object.niftools_bs_invmarker[0].bs_inv_y
                             n_extra_list.rotation_z = root_object.niftools_bs_invmarker[0].bs_inv_z
                             n_extra_list.zoom = root_object.niftools_bs_invmarker[0].bs_inv_zoom
-                             
+
                             root_block.add_extra_data(n_extra_list)
 
                 # export the root objects as a NiNodes; their children are
@@ -544,7 +546,7 @@ class NifExport(NifCommon):
                     root_block.add_effect(b)
             else:
                 root_block.name = root_name
-                
+
             self.root_ninode = None
             for root_obj in root_objects:
                 if root_obj.niftools.rootnode == 'BSFadeNode':
@@ -585,7 +587,7 @@ class NifExport(NifCommon):
                 if fileext.lower() != ext:
                     NifLog.warn("Changing extension from {0} to {1} on output file".format(fileext, ext))
                 niffile = os.path.join(directory, filebase + ext)
-                
+
                 data = NifFormat.Data(version=self.version, user_version=self.user_version, user_version_2=self.user_version_2)
                 data.roots = [root_block]
                 if NifOp.props.game == 'NEOSTEAM':
@@ -672,7 +674,7 @@ class NifExport(NifCommon):
                     else:
                         for b_obj in bpy.data.objects:
                             self.animationhelper.export_keyframes(kf_root, b_obj)
-                        
+
                     # for node, ctrls in zip(iter(node_kfctrls.keys()), iter(node_kfctrls.values())):
                         # # export a block for every interpolator in every controller
                         # for ctrl in ctrls:
@@ -790,6 +792,9 @@ class NifExport(NifCommon):
             # clear progress bar
             NifLog.info("Finished")
 
+        print("removing automirror objects at end of export")
+        remove_stale_automirror_objects()
+
         # save exported file (this is used by the test suite)
         self.root_blocks = [root_block]
 
@@ -831,7 +836,7 @@ class NifExport(NifCommon):
 
         else:
             NifLog.warn("Only Morrowind, Oblivion, and Fallout 3 collisions are supported, skipped collision object '{0}'".format(b_obj.name))
-            
+
     def export_egm(self, keyblocks):
         self.egm_data = EgmFormat.Data(num_vertices=len(keyblocks[0].data))
         for keyblock in keyblocks:
