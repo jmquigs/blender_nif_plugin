@@ -1373,22 +1373,25 @@ class MeshHelper:
                                 s_part_index = NifFormat.BSDismemberBodyPartType._enumvalues.index(s_part.body_part)
                                 s_part_name = NifFormat.BSDismemberBodyPartType._enumkeys[s_part_index]
 
-                                # sometimes these flags are missing if the blender file was
+                                # sometimes these flags are not set correctly if the blender file was
                                 # constructed in a way outside of normal import (i.e append or
-                                # from an old file version).  both need to be set for the object
-                                # to show up in game and in the editor, so do so now.  since I'm not
+                                # from an old file version).  since I'm not
                                 # sure if this is generally a valid thing to do, restricting it
                                 # to games where I know it is needed.
+                                # also, since update_skin_partition() can merge partitions, I'm not
+                                # sure how the results of that is supposed to reconcile with the
+                                # manual settings from the UI (Mesh -> Niftools Dismember Flags Panel).
+                                # here, I just copy the flags from the results of update_skin_partition().
                                 if NifOp.props.game in ('FALLOUT_3'):
                                     # make sure there are part flags for a part with this name
                                     flags = next((x for x in b_obj_part_flags if x.name == s_part_name), None)
                                     if flags is None:
-                                        NifLog.warn("Adding EDITOR and START flags to skin part {0}".format(s_part_name))
+                                        NifLog.warn("Adding body part flags to skin part {0}".format(s_part_name))
                                         print('add flags for part', s_part_name)
                                         b_obj_partflag = b_obj.niftools_part_flags.add()
                                         b_obj_partflag.name = (s_part_name)
-                                        b_obj_partflag.pf_editorflag = True
-                                        b_obj_partflag.pf_startflag = True
+                                        b_obj_partflag.pf_editorflag = s_part.part_flag.editor_visible
+                                        b_obj_partflag.pf_startflag = s_part.part_flag.start_new_boneset
 
                                 for b_part in b_obj_part_flags:
                                     if s_part_name == b_part.name:
