@@ -547,6 +547,27 @@ class NifExport(NifCommon):
             else:
                 root_block.name = root_name
 
+            if NifOp.props.game in ('FALLOUT_3'):
+                # reorder scene root children so that trishape objects are first (this is a
+                # "light" version of nifskope's "reorder link arrays" sanitize and is necessary
+                # to ensure that, for example, armor can be unequipped properly)
+                block = root_block
+                if block.name == b'Scene Root':
+                    print('reordering tri shapes to front of Scene Root children list')
+                    #print('  scene root children: ', type(block.children))
+                    tri_shapes = []
+                    not_tri_shapes = []
+
+                    for child in block.children:
+                        if type(child).__name__ == 'NiTriShape':
+                            tri_shapes.append(child)
+                        else:
+                            not_tri_shapes.append(child)
+                    #print('tri shapes: ', len(tri_shapes))
+                    #print('not tri shapes: ', len(not_tri_shapes))
+                    new_kids = tri_shapes + not_tri_shapes
+                    block.set_children(new_kids)
+
             self.root_ninode = None
             for root_obj in root_objects:
                 if root_obj.niftools.rootnode == 'BSFadeNode':
