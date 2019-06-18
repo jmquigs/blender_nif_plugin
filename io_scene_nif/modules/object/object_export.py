@@ -77,8 +77,8 @@ mir_groups = {
     'BP_TORSOSECTION_RIGHTARM': 'BP_TORSOSECTION_LEFTARM'
 }
 
-def prep_manual_mirror(dup):
-    """ Prep to manually mirror the vgroups contained in mir_groups.  finish_manual_mirror()
+def prep_automirror(dup):
+    """ Prep to mirror the vgroups contained in mir_groups.  finish_automirror()
     must be called after the object is duplicated to finish the mirror.  Note mirror is always
     done right to left, that is, the real vertices should be on the right side of the mesh."""
 
@@ -101,7 +101,7 @@ def prep_manual_mirror(dup):
         for v in vs:
             mir_group.add([v.index], src_group.weight(v.index), 'REPLACE')
 
-def finish_manual_mirror(dup):
+def finish_automirror(dup):
     for src in mir_groups.keys():
         # delete the src and dest groups
         del_group(dup, src)
@@ -184,16 +184,12 @@ def get_mirror_dup(obj, mirror_vgroups=True):
 
     dup.name = dup_name
     if mirror_vgroups:
-        prep_manual_mirror(dup)
+        prep_automirror(dup)
     mesh = dup.to_mesh(scene, True, 'PREVIEW')
     dup.data = mesh
     if mirror_vgroups:
-        finish_manual_mirror(dup)
+        finish_automirror(dup)
 
-    # if selected is not None:
-    #     bpy.context.scene.objects.active = selected
-    #     if selected_mode is not None:
-    #         bpy.ops.object.mode_set(mode=selected_mode)
 
     return dup
 # END mirror utility functions
@@ -1527,9 +1523,7 @@ class MeshHelper:
 
                         # fix data consistency type
                         tridata.consistency_flags = b_obj.niftools.consistency_flags
-        if mirror_dup is not None:
-            print('unlink', mirror_dup)
-            #bpy.context.scene.objects.unlink(mirror_dup)
+
 
     def smooth_mesh_seams(self, b_objs):
         # get shared vertices
