@@ -46,6 +46,153 @@ from io_scene_nif.utility import nif_utils
 from io_scene_nif.utility.nif_global import NifOp
 from io_scene_nif.utility.nif_logging import NifLog
 
+# TODO:
+# mirroring:
+# - ui option to enable/disable
+# - when failed and need to select, select in original object, not mirror
+
+# - body part thing
+
+
+# BEGIN mirror utility functions
+def del_group(obj, groupname):
+    selexists = groupname in obj.vertex_groups
+    if selexists:
+        selg = obj.vertex_groups[groupname]
+        obj.vertex_groups.remove(selg)
+
+def del_and_recreate_group(obj, groupname):
+    del_group(obj, groupname)
+
+    obj.vertex_groups.new(groupname)
+    selg = obj.vertex_groups[groupname]
+    return selg
+
+# blender does not mirror these groups properly, so we do it manually (if mirroring is enabled)
+mir_groups = {
+    'Bip01 RUpArmTwistBone': 'Bip01 LUpArmTwistBone',
+    'BP_RIGHTARM': 'BP_LEFTARM',
+    'BP_RIGHTLEG': 'BP_LEFTLEG',
+    'BP_TORSOSECTION_RIGHTLEG': 'BP_TORSOSECTION_LEFTLEG',
+    'BP_TORSOSECTION_RIGHTARM': 'BP_TORSOSECTION_LEFTARM'
+}
+
+def prep_automirror(dup):
+    """ Prep to mirror the vgroups contained in mir_groups.  finish_automirror()
+    must be called after the object is duplicated to finish the mirror.  Note mirror is always
+    done right to left, that is, the real vertices should be on the right side of the mesh."""
+
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    for g in mir_groups.keys():
+        groups = dup.vertex_groups
+        # find the index of the source group
+        src_group = next((x for x in groups if x.name == g), None)
+        if src_group is None:
+            print('cannot mirror group ' + g + ' group index not found')
+            continue
+        #print(src_group, src_group.index)
+        vs = [ v for v in dup.data.vertices if src_group.index in [ vg.group for vg in v.groups ] ]
+        #print(len(vs))
+
+        del_and_recreate_group(dup, g + '_AutoMirror.L')
+        mir_group = del_and_recreate_group(dup, g + '_AutoMirror.R')
+
+        for v in vs:
+            mir_group.add([v.index], src_group.weight(v.index), 'REPLACE')
+
+def finish_automirror(dup):
+    for src in mir_groups.keys():
+        # delete the src and dest groups
+        del_group(dup, src)
+        dest = mir_groups[src]
+        del_group(dup, dest)
+
+        # rename the source automirror group (.R)
+        src_name = src + '_AutoMirror.R'
+        if not src_name in dup.vertex_groups:
+            continue
+
+        group = dup.vertex_groups[src_name]
+        group.name = src
+
+        # rename the dest automirror group to the base name
+        group = dup.vertex_groups[src + '_AutoMirror.L']
+        group.name = dest
+
+def remove_stale_automirror_objects():
+    # remove previous automirrors
+    stale_mirrors = [x for x in bpy.context.scene.objects if x.name.startswith('AutoMirror_')]
+    if len(stale_mirrors) > 0:
+        print('deleting stale automirrors:', stale_mirrors)
+        was_selected = [x for x in bpy.context.scene.objects if x.select]
+        bpy.ops.object.select_all(action='DESELECT')
+        for o in stale_mirrors:
+            o.select = True
+        bpy.ops.object.delete()
+        for o in was_selected:
+            o.select = True
+
+
+    # for m in stale_mirrors:
+    #     bpy.context.scene.objects.unlink(m)
+
+def get_mirror_dup(obj, mirror_vgroups=True):
+    """ Return a duplicate of the supplied object with mirroring applied """
+
+    # select the object, and make sure it is in object mode, otherwise this fails
+    # selobj = next((x for x in bpy.context.scene.objects if x.name == obj.name), None)
+    # if selobj is None:
+    #     raise ValueError("can't find object for automirror!")
+    # selobj.select = True
+    print('get mirror dup', obj)
+    print('selected', obj.select)
+
+    # print('active object', bpy.context.scene.objects.active)
+    # selected = bpy.context.scene.objects.active
+    # if selected is None:
+    #     print(' no selected object, cannot get mirror')
+    #     return None
+
+    # selected_mode = None
+    # if bpy.context.scene.objects.active:
+    #     print('active mode', bpy.context.scene.objects.active.mode)
+    #     selected_mode = bpy.context.scene.objects.active.mode
+
+    # bpy.context.scene.objects.active = obj
+    # if bpy.context.scene.objects.active and bpy.context.scene.objects.active.mode != 'OBJECT':
+    #     bpy.ops.object.mode_set(mode='OBJECT')
+
+    scene = bpy.context.scene
+
+
+
+    bpy.ops.object.select_all(action = 'DESELECT')
+    obj.select = True
+
+    dup_name = "AutoMirror_" + obj.name
+
+    print('duplicating', obj)
+    print('active object(s)',  bpy.context.scene.objects.active)
+    bpy.ops.object.duplicate()
+    for o in bpy.context.scene.objects:
+        print('object', o, o.select)
+    dup = next(x for x in bpy.context.scene.objects if x.select)
+    print('duplicate: ', dup)
+    if (obj.name == dup.name or obj == dup):
+        print('error! asked for a duplicate but got same object back', obj.name == dup.name, obj == dup)
+
+    dup.name = dup_name
+    if mirror_vgroups:
+        prep_automirror(dup)
+    mesh = dup.to_mesh(scene, True, 'PREVIEW')
+    dup.data = mesh
+    if mirror_vgroups:
+        finish_automirror(dup)
+
+
+    return dup
+# END mirror utility functions
 
 class ObjectHelper:
 
@@ -442,6 +589,15 @@ class MeshHelper:
         NifLog.info("Exporting {0}".format(b_obj))
 
         assert (b_obj.type == 'MESH')
+
+        # maybe apply mirror modifier
+        mirror_dup = None
+        for mod in b_obj.modifiers:
+            if mod.type == 'MIRROR':
+                mirror_dup = get_mirror_dup(b_obj, mod.use_mirror_vertex_groups)
+                if mirror_dup:
+                    b_obj = mirror_dup
+                break
 
         # get mesh from b_obj
         b_mesh = b_obj.data  # get mesh data
@@ -1213,22 +1369,25 @@ class MeshHelper:
                                 s_part_index = NifFormat.BSDismemberBodyPartType._enumvalues.index(s_part.body_part)
                                 s_part_name = NifFormat.BSDismemberBodyPartType._enumkeys[s_part_index]
 
-                                # sometimes these flags are missing if the blender file was
+                                # sometimes these flags are not set correctly if the blender file was
                                 # constructed in a way outside of normal import (i.e append or
-                                # from an old file version).  both need to be set for the object
-                                # to show up in game and in the editor, so do so now.  since I'm not
+                                # from an old file version).  since I'm not
                                 # sure if this is generally a valid thing to do, restricting it
                                 # to games where I know it is needed.
+                                # also, since update_skin_partition() can merge partitions, I'm not
+                                # sure how the results of that is supposed to reconcile with the
+                                # manual settings from the UI (Mesh -> Niftools Dismember Flags Panel).
+                                # here, I just copy the flags from the results of update_skin_partition().
                                 if NifOp.props.game in ('FALLOUT_3'):
                                     # make sure there are part flags for a part with this name
                                     flags = next((x for x in b_obj_part_flags if x.name == s_part_name), None)
                                     if flags is None:
-                                        NifLog.warn("Adding EDITOR and START flags to skin part {0}".format(s_part_name))
+                                        NifLog.warn("Adding body part flags to skin part {0}".format(s_part_name))
                                         print('add flags for part', s_part_name)
                                         b_obj_partflag = b_obj.niftools_part_flags.add()
                                         b_obj_partflag.name = (s_part_name)
-                                        b_obj_partflag.pf_editorflag = True
-                                        b_obj_partflag.pf_startflag = True
+                                        b_obj_partflag.pf_editorflag = s_part.part_flag.editor_visible
+                                        b_obj_partflag.pf_startflag = s_part.part_flag.start_new_boneset
 
                                 for b_part in b_obj_part_flags:
                                     if s_part_name == b_part.name:
@@ -1364,6 +1523,7 @@ class MeshHelper:
 
                         # fix data consistency type
                         tridata.consistency_flags = b_obj.niftools.consistency_flags
+
 
     def smooth_mesh_seams(self, b_objs):
         # get shared vertices
