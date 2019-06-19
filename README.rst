@@ -1,35 +1,17 @@
 The Blender NIF Plugin enables Blender to import and export NIF files.
 
-Requirements
-------------
+This is a fork of the official blender nif tools:
+`https://github.com/niftools/blender_nif_plugin`
 
-* `Blender <http://www.blender.org/download/get-blender/>`_
+The master branch of this repository is based on the "develop" branch of upstream which is why
+it appears to be so far ahead.
 
-Download
---------
+I am improving the exporters for Fallout 3 and New Vegas in Blender 2.79b.
+In the future I may look at Skyrim and Fallout 4, and also Blender 2.80 support.
+I'm not interested in other games but I try not to break them with my changes.
 
-* Release downloadable from - `https://github.com/niftools/blender_nif_plugin/releases <https://github.com/niftools/blender_nif_plugin/releases>`_
-* Currently there are no stable releases of Blender Nif Plugin 2.6.x series, the only developer builds
+There is no official release of this fork.  When F3 is a decent state I may
+prepare a release focused on that.
 
-Documentation
--------------
-
-* For full Online documentation, visit `https://blender-nif-plugin.readthedocs.io <https://blender-nif-plugin.readthedocs.io>`_
-* For a list of changes between versions, see `Changelog <CHANGELOG.rst>`_
-* See `How to Contribute <CONTRIBUTING.rst>`_ for a list of contribution rules.
-
-Support
--------
-
-`Changelog <CHANGELOG.rst>`_
-
-Issues
-------
-
-* Report all bugs and issues via Blender Nif Plugin repository's `Issue tracker <http://github.com/niftools/blender_nif_plugin/issues>`_
-
-Fork
-----
-
-* git clone --recursive git://github.com/niftools/blender_nif_plugin.git
-* http://github.com/niftools/blender_nif_plugin
+See the official site for more general information about these tools:
+`https://github.com/niftools/blender_nif_plugin`
