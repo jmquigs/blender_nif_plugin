@@ -46,13 +46,25 @@ from io_scene_nif.utility import nif_utils
 from io_scene_nif.utility.nif_global import NifOp
 from io_scene_nif.utility.nif_logging import NifLog
 
-# TODO:
+# JMQTODO:
+# settings:
+# - save other export settings
+# - button to reset settings to default and reset for selected game
+# - figure out a sane way to deal with scale
+# - button for triangulate
+# - button for apply modifiers
+# mesh editing:
+# - auto triangulate faces with more than 5 verts
+# - when selecting faces due to body part error, select them
+# in unmirrored object (best-effort)
 # mirroring:
 # - ui option to enable/disable
 # - when failed and need to select, select in original object, not mirror
-
-# - body part thing
-
+# - mirror direction option?
+# materials
+# - emissive alpha?
+# install package
+# - deal with nose, sphinx dependencies
 
 # BEGIN mirror utility functions
 def del_group(obj, groupname):
@@ -140,32 +152,7 @@ def remove_stale_automirror_objects():
 def get_mirror_dup(obj, mirror_vgroups=True):
     """ Return a duplicate of the supplied object with mirroring applied """
 
-    # select the object, and make sure it is in object mode, otherwise this fails
-    # selobj = next((x for x in bpy.context.scene.objects if x.name == obj.name), None)
-    # if selobj is None:
-    #     raise ValueError("can't find object for automirror!")
-    # selobj.select = True
-    print('get mirror dup', obj)
-    print('selected', obj.select)
-
-    # print('active object', bpy.context.scene.objects.active)
-    # selected = bpy.context.scene.objects.active
-    # if selected is None:
-    #     print(' no selected object, cannot get mirror')
-    #     return None
-
-    # selected_mode = None
-    # if bpy.context.scene.objects.active:
-    #     print('active mode', bpy.context.scene.objects.active.mode)
-    #     selected_mode = bpy.context.scene.objects.active.mode
-
-    # bpy.context.scene.objects.active = obj
-    # if bpy.context.scene.objects.active and bpy.context.scene.objects.active.mode != 'OBJECT':
-    #     bpy.ops.object.mode_set(mode='OBJECT')
-
     scene = bpy.context.scene
-
-
 
     bpy.ops.object.select_all(action = 'DESELECT')
     obj.select = True
@@ -189,7 +176,6 @@ def get_mirror_dup(obj, mirror_vgroups=True):
     dup.data = mesh
     if mirror_vgroups:
         finish_automirror(dup)
-
 
     return dup
 # END mirror utility functions

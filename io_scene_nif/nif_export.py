@@ -61,6 +61,41 @@ import os.path
 
 import bpy
 
+EXPORT_SETTINGS_KEY='nif.exportsettings'
+
+class NifExportSettings():
+    them = None
+    dirty = False
+
+    def get(self, k, defv=None):
+        if self.them is None:
+            return defv
+        return self.them[k]
+
+    def set(self, k, v):
+        if self.them is None:
+            # note, after a load or save, this changes type to a blender scene property thingy
+            self.them = {}
+
+        oldv = self.them.get(k, None)
+        if oldv != v:
+            self.dirty = True
+            self.them[k] = v
+
+    def load(self, context):
+        try:
+            self.them = context.scene[EXPORT_SETTINGS_KEY]
+        except KeyError as e:
+            print('unable to load saved export settings: ', e)
+
+    def save(self, context):
+        if not self.dirty:
+            print('export settings not dirty, avoiding save')
+            return
+
+        if self.them != None:
+            context.scene[EXPORT_SETTINGS_KEY] = self.them
+            print('saved export settings:', self.them)
 
 # main export class
 class NifExport(NifCommon):
@@ -100,6 +135,7 @@ class NifExport(NifCommon):
         self.constrainthelper = constraint_export(parent=self)
         self.texturehelper = TextureHelper(parent=self)
         self.objecthelper = ObjectHelper(parent=self)
+        self.context = context
 
     def execute(self):
         """Main export function."""
@@ -809,6 +845,12 @@ class NifExport(NifCommon):
                     self.egm_data.write(stream)
                 finally:
                     stream.close()
+
+            # last, save settings on successful export
+            exset = NifExportSettings()
+            exset.load(self.context)
+            exset.set('filename', NifOp.props.filepath)
+            exset.save(self.context)
         finally:
             # clear progress bar
             NifLog.info("Finished")
