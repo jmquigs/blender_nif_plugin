@@ -48,8 +48,7 @@ from io_scene_nif.utility.nif_logging import NifLog
 
 # JMQTODO:
 # settings:
-# - save other export settings
-# - button to reset settings to default and reset for selected game
+# - button to reset settings for selected game?
 # - figure out a sane way to deal with scale
 # - button for triangulate
 # - button for apply modifiers

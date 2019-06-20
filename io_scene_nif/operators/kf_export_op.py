@@ -79,7 +79,7 @@ class KfExportOperator(bpy.types.Operator, ExportHelper, NifOperatorCommon):
             ],
         name="Game",
         description="For which game to export.",
-        default='FALLOUT_3')
+        default='OBLIVION')
 
     #: Use BSAnimationNode (for Morrowind).
     bs_animation_node = bpy.props.BoolProperty(

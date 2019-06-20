@@ -53,6 +53,30 @@ def _game_to_enum(game):
     enum = game.upper().translate(table).replace("__", "_")
     return enum
 
+class NifResetExportSettings(bpy.types.Operator):
+    bl_label = "Reset Settings to Defaults"
+    bl_idname = "scene.reset_nif_export_settings"
+
+    def execute(self, context):
+        settings = NifExportSettings()
+        settings.load(context)
+
+        defs = get_export_properties()
+        export_operator = context.active_operator
+
+        for (k, defs) in defs.items():
+            defv = defs.get('default', None)
+            #print('default value for ', k, 'is', defv)
+            setting_val = settings.get(k)
+
+            if setting_val != defv or getattr(export_operator.properties, k) != defv:
+                settings.set(k, defv)
+                setattr(export_operator.properties, k, defv)
+
+        return {"FINISHED"}
+
+bpy.utils.register_class(NifResetExportSettings)
+
 class NifExportOperator(bpy.types.Operator, ExportHelper, NifOperatorCommon):
     """Operator for saving a nif file."""
 
@@ -80,7 +104,7 @@ class NifExportOperator(bpy.types.Operator, ExportHelper, NifOperatorCommon):
             ],
         name="Game",
         description="For which game to export.",
-        default='FALLOUT_3')
+        default='OBLIVION')
 
     #: How to export animation.
     animation = bpy.props.EnumProperty(
@@ -163,15 +187,58 @@ class NifExportOperator(bpy.types.Operator, ExportHelper, NifOperatorCommon):
         for game, versions in NifFormat.games.items() if game != '?'
         }
 
+    prop_defs = {}
+
     def invoke(self, context, event):
         settings = NifExportSettings()
         settings.load(context)
+
+        # find all available properties and their default values
+        self.prop_defs = get_export_properties()
+
+        # enumerate properties, if a setting exists and differs from current property value,
+        # change the property value
+        for k in self.prop_defs:
+            setting_val = settings.get(k)
+
+            if setting_val != None and getattr(self.properties, k) != setting_val:
+                setattr(self.properties, k, setting_val)
+                #print('new value of', k, 'is', getattr(self.properties, k))
 
         filename = settings.get('filename')
         if filename is not None:
             self.filepath = filename
 
         return ExportHelper.invoke(self, context, event)
+
+    def draw(self, context):
+        layout = self.layout
+
+        def add_prop_if_visible(pname):
+            pdef = self.prop_defs.get(pname, None)
+            if pdef is None:
+                return
+            opts = pdef.get('options', None)
+            if opts is None or 'HIDDEN' not in opts:
+                layout.prop(self, pname)
+
+        add_prop_if_visible("scale_correction_export")
+        add_prop_if_visible("game")
+        add_prop_if_visible("animation")
+        add_prop_if_visible("smooth_object_seams")
+        add_prop_if_visible("bs_animation_node")
+        add_prop_if_visible("stripify")
+        add_prop_if_visible("stitch_strips")
+        add_prop_if_visible("flatten_skin")
+        add_prop_if_visible("skin_partition")
+        add_prop_if_visible("pad_bones")
+        add_prop_if_visible("max_bones_per_partition")
+        add_prop_if_visible("max_bones_per_vertex")
+        add_prop_if_visible("force_dds")
+
+        layout.separator()
+
+        self.layout.operator(NifResetExportSettings.bl_idname)
 
     def execute(self, context):
         """Execute the export operators: first constructs a
@@ -181,3 +248,15 @@ class NifExportOperator(bpy.types.Operator, ExportHelper, NifOperatorCommon):
         """
         return nif_export.NifExport(self, context).execute()
 
+
+def get_export_properties():
+    prop_defs = {}
+
+    props = vars(NifExportOperator)
+    for k in props:
+        prop = props[k]
+        if type(prop).__name__ == 'tuple':
+            ty, pdict = prop
+            if ty.__name__.find("Property") != -1:
+                prop_defs[k] = pdict
+    return prop_defs
