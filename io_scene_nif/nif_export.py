@@ -70,11 +70,11 @@ class NifExportSettings():
     def get(self, k, defv=None):
         if self.them is None:
             return defv
-        return self.them[k]
+        return self.them.get(k, defv)
 
     def set(self, k, v):
         if self.them is None:
-            # note, after a load or save, this changes type to a blender scene property thingy
+            # note, after a load or save, this changes its type to be a blender scene property thingy
             self.them = {}
 
         oldv = self.them.get(k, None)
@@ -135,6 +135,7 @@ class NifExport(NifCommon):
         self.constrainthelper = constraint_export(parent=self)
         self.texturehelper = TextureHelper(parent=self)
         self.objecthelper = ObjectHelper(parent=self)
+        self.operator = operator
         self.context = context
 
     def execute(self):
@@ -846,9 +847,18 @@ class NifExport(NifCommon):
                 finally:
                     stream.close()
 
-            # last, save settings on successful export
             exset = NifExportSettings()
             exset.load(self.context)
+
+            # last, save settings on successful export
+            for k in dir(NifOp.props):
+                defs = self.operator.prop_defs.get(k, {})
+                dv = defs.get('default', None)
+                if dv != None:
+                    new_value = getattr(NifOp.props, k)
+                    print('storing modified setting: ', k, new_value)
+                    exset.set(k, new_value)
+
             exset.set('filename', NifOp.props.filepath)
             exset.save(self.context)
         finally:
