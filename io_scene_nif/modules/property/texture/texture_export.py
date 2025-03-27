@@ -165,7 +165,20 @@ class TextureHelper:
             bsshader.emissive_color.r = b_mat.niftools.emissive_color.r
             bsshader.emissive_color.g = b_mat.niftools.emissive_color.g
             bsshader.emissive_color.b = b_mat.niftools.emissive_color.b
-            bsshader.emissive_color.a = b_mat.niftools.emissive_alpha
+
+            # JMQ 3/24/2025: not sure why this hack is needed, maybe my pyffi is out of date on this comp.
+            # but anyway this value is a color object not a float so it explodes when get passed through.
+            # hack it to be a float if its rgb
+            alpha_value = b_mat.niftools.emissive_alpha
+            if hasattr(alpha_value, "r") and hasattr(alpha_value, "g") and hasattr(alpha_value, "b"):
+                NifLog.info("> applying alpha hack because its a color")
+                alpha_value = 1.0  # Use 1.0 if it's a tuple or list
+            else:
+                NifLog.info("> alpha is not a tuple: " + str(alpha_value))
+            bsshader.emissive_color.a = float(alpha_value)
+
+            #bsshader.emissive_color.a = b_mat.niftools.emissive_alpha
+            bsshader.emissive_color.a = alpha_value
             bsshader.emissive_multiple = b_mat.emit
 
             # Shader Flags

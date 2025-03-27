@@ -704,6 +704,9 @@ class MeshHelper:
                     NifLog.warn("Object has very high transparency, it will probably be invisible.  " +
                         "Consider checking transparency settings in UI: Material button -> Transparency, and Texture button -> Influence)." +
                         " If you did not intend the object to be transparent, disable the alpha influence in the diffuse texture.")
+                # JMQ: I added this a while back, not sure why.                    
+                NifLog.warn(
+                        "X Material has alpha: " + str(mesh_hasalpha) + ' transparency: ' + str(mesh_mat_transparency))
 
                 # wire mat
                 mesh_haswire = (b_mat.type == 'WIRE')
