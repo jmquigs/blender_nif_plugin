@@ -1366,6 +1366,20 @@ class MeshHelper:
                             partitions = skininst.partitions
                             b_obj_part_flags = b_obj.niftools_part_flags
 
+                            # warn if a body part got split across multiple partitions
+                            # (happens when one part uses more than max_bones_per_partition bones)
+                            part_counts = {}
+                            for s_part in partitions:
+                                s_part_index = NifFormat.BSDismemberBodyPartType._enumvalues.index(s_part.body_part)
+                                s_part_name = NifFormat.BSDismemberBodyPartType._enumkeys[s_part_index]
+                                part_counts[s_part_name] = part_counts.get(s_part_name, 0) + 1
+                            for s_part_name, count in part_counts.items():
+                                if count > 1:
+                                    NifLog.warn("IMPORTANT: Body part {0} of '{1}' was split into {2} partitions; "
+                                                "it probably uses more than {3} bones. Raise Max Bones Per Partition (in export settings) "
+                                                "or reduce the bones weighted to that part.".format(
+                                                    s_part_name, b_obj.name, count, NifOp.props.max_bones_per_partition))
+
                             for s_part in partitions:
                                 s_part_index = NifFormat.BSDismemberBodyPartType._enumvalues.index(s_part.body_part)
                                 s_part_name = NifFormat.BSDismemberBodyPartType._enumkeys[s_part_index]
