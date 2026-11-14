@@ -685,15 +685,19 @@ class MeshHelper:
 
                 # alpha mat
                 mesh_hasalpha = b_alpha_prop
+                alpha_reason = 'texture alpha' if b_alpha_prop else None
                 mesh_mat_transparency = (1 - b_mat.alpha)
                 if b_mat.use_transparency:
                     if abs(mesh_mat_transparency - 1.0) > NifOp.props.epsilon:
                         mesh_hasalpha = True
+                        alpha_reason = 'use_transparency, alpha=%.3f' % b_mat.alpha
                 elif mesh_hasvcola:
                     mesh_hasalpha = True
-                elif b_mat.animation_data and \
-                        'Alpha' in b_mat.animation_data.action.fcurves:
+                    alpha_reason = 'vertex color alpha'
+                elif b_mat.animation_data and b_mat.animation_data.action and \
+                        any(fc.data_path == 'alpha' for fc in b_mat.animation_data.action.fcurves):
                     mesh_hasalpha = True
+                    alpha_reason = 'animated alpha'
 
                 if not mesh_hasalpha:
                     # if transparency is not in use, the value should be set to 1 in the
@@ -702,11 +706,20 @@ class MeshHelper:
                 elif mesh_mat_transparency < 0.05:
                     # object will probably be invisible, warn about this.
                     NifLog.warn("Object has very high transparency, it will probably be invisible.  " +
-                        "Consider checking transparency settings in UI: Material button -> Transparency, and Texture button -> Influence)." +
-                        " If you did not intend the object to be transparent, disable the alpha influence in the diffuse texture.")
-                # JMQ: I added this a while back, not sure why.                    
-                NifLog.warn(
-                        "X Material has alpha: " + str(mesh_hasalpha) + ' transparency: ' + str(mesh_mat_transparency))
+                                "Consider checking transparency settings in UI: Material button -> Transparency, and Texture button -> Influence)." +
+                                " If you did not intend the object to be transparent, disable the alpha influence in the diffuse texture.")
+
+                # JMQ: debug logging for material alpha decisions
+                _dbg_obj = locals().get('b_obj')
+                NifLog.warn("Material '%s' (obj '%s', lib=%s, users=%d, transp_method=%s, tex=%s): "
+                            "hasalpha=%s reason=%s transparency=%.3f" % (
+                    b_mat.name,
+                    _dbg_obj.name if _dbg_obj else '?',
+                    b_mat.library.filepath if b_mat.library else None,
+                    b_mat.users,
+                    b_mat.transparency_method,
+                    [s.texture.name for s in b_mat.texture_slots if s and s.texture],
+                    mesh_hasalpha, alpha_reason, mesh_mat_transparency))
 
                 # wire mat
                 mesh_haswire = (b_mat.type == 'WIRE')
