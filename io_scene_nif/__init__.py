@@ -113,9 +113,11 @@ def register():
     bpy.utils.register_module(__name__)
     bpy.types.INFO_MT_file_import.append(menu_func_import)
     bpy.types.INFO_MT_file_export.append(menu_func_export)
+    operators.nif_export_op.register_keymaps()
 
 
 def unregister():
+    operators.nif_export_op.unregister_keymaps()
     # no idea how to do this... oh well, let's not lose any sleep over it uninit_loggers()
     bpy.types.INFO_MT_file_import.remove(menu_func_import)
     bpy.types.INFO_MT_file_export.remove(menu_func_export)

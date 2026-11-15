@@ -77,6 +77,44 @@ class NifResetExportSettings(bpy.types.Operator):
 
 bpy.utils.register_class(NifResetExportSettings)
 
+class NifExportDialogExecute(bpy.types.Operator):
+    """Confirm the NIF export file dialog (same as clicking the Export button)"""
+    bl_label = "Export NIF (confirm dialog)"
+    bl_idname = "export_scene.nif_dialog_execute"
+
+    @classmethod
+    def poll(cls, context):
+        # Only active in the file browser opened by the nif export operator.
+        # Elsewhere the poll fails and the key press falls through to
+        # whatever it is normally bound to (X deletes files by default).
+        space = context.space_data
+        if space is None or space.type != 'FILE_BROWSER':
+            return False
+        op = space.active_operator
+        return op is not None and op.bl_idname in ("EXPORT_SCENE_OT_nif", "export_scene.nif")
+
+    def execute(self, context):
+        return bpy.ops.file.execute()
+
+_addon_keymaps = []
+
+def register_keymaps():
+    kc = bpy.context.window_manager.keyconfigs.addon
+    if kc is None:
+        # no keyconfigs in background mode
+        return
+    # "File Browser" covers the side panel and header, "File Browser Main"
+    # the file list (where X is otherwise bound to file.delete)
+    for km_name in ("File Browser", "File Browser Main"):
+        km = kc.keymaps.new(name=km_name, space_type='FILE_BROWSER')
+        kmi = km.keymap_items.new(NifExportDialogExecute.bl_idname, 'X', 'PRESS')
+        _addon_keymaps.append((km, kmi))
+
+def unregister_keymaps():
+    for km, kmi in _addon_keymaps:
+        km.keymap_items.remove(kmi)
+    del _addon_keymaps[:]
+
 class NifExportOperator(bpy.types.Operator, ExportHelper, NifOperatorCommon):
     """Operator for saving a nif file."""
 
@@ -239,6 +277,7 @@ class NifExportOperator(bpy.types.Operator, ExportHelper, NifOperatorCommon):
         layout.separator()
 
         self.layout.operator(NifResetExportSettings.bl_idname)
+        self.layout.label(text="Press X to export")
 
     def execute(self, context):
         """Execute the export operators: first constructs a

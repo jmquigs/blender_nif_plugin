@@ -132,17 +132,19 @@ def finish_automirror(dup):
         group.name = dest
 
 def remove_stale_automirror_objects():
-    # remove previous automirrors
-    stale_mirrors = [x for x in bpy.context.scene.objects if x.name.startswith('AutoMirror_')]
-    if len(stale_mirrors) > 0:
-        print('deleting stale automirrors:', stale_mirrors)
-        was_selected = [x for x in bpy.context.scene.objects if x.select]
-        bpy.ops.object.select_all(action='DESELECT')
-        for o in stale_mirrors:
-            o.select = True
-        bpy.ops.object.delete()
-        for o in was_selected:
-            o.select = True
+    """Delete every object whose name begins with "automirror" (any case).
+
+    Objects are removed directly from bpy.data rather than via the delete
+    operator, so hidden objects, objects on inactive layers and objects in
+    other scenes are removed too, and the current selection is untouched."""
+    stale_mirrors = [x for x in bpy.data.objects if x.name.lower().startswith('automirror')]
+    for o in stale_mirrors:
+        print('deleting automirror object:', o.name)
+        data = o.data
+        bpy.data.objects.remove(o, do_unlink=True)
+        # the mirror duplicates own a baked mesh; don't leave it orphaned
+        if isinstance(data, bpy.types.Mesh) and data.users == 0:
+            bpy.data.meshes.remove(data)
 
 
     # for m in stale_mirrors:
