@@ -235,6 +235,8 @@ class NifExportOperator(bpy.types.Operator, ExportHelper, NifOperatorCommon):
         add_prop_if_visible("max_bones_per_partition")
         add_prop_if_visible("max_bones_per_vertex")
         add_prop_if_visible("force_dds")
+        # defined on the common base operator, so not in prop_defs
+        layout.prop(self, "log_level")
 
         layout.separator()
 
