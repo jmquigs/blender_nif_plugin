@@ -367,6 +367,8 @@ class ObjectHelper:
 
         # and fill in this node's non-trivial values
         node.name = self.get_full_name(node_name)
+        NifLog.debug("[namedbg] export_node: b_obj={0!r} node_name={1!r} -> {2} named {3!r}".format(
+            b_obj.name if b_obj else None, node_name, node.__class__.__name__, node.name))
 
         # default node flags
         if b_obj_type in export_types:
@@ -451,6 +453,8 @@ class ObjectHelper:
             line = b_textline.body
             if len(line) > 0:
                 name, fullname = line.split(';')
+                if name != fullname:
+                    NifLog.debug("[namedbg] FullNames buffer remaps {0!r} -> {1!r}".format(name, fullname))
                 self.nif_export.dict_names[name] = fullname
 
     def get_unique_name(self, b_name):
@@ -467,13 +471,20 @@ class ObjectHelper:
             unique_name = b_name
         # blender bone naming -> nif bone naming
         unique_name = armature.get_bone_name_for_nif(unique_name)
+        if unique_name != b_name:
+            NifLog.debug("[namedbg] get_unique_name: {0!r} -> {1!r} after bone name conversion".format(b_name, unique_name))
         # ensure uniqueness
         if unique_name in self.nif_export.dict_block_names or unique_name in list(self.nif_export.dict_names.values()):
             unique_int = 0
             old_name = unique_name
+            NifLog.debug("[namedbg] get_unique_name: {0!r} already taken (in dict_block_names={1}, dict_names keys mapping to it={2})".format(
+                old_name,
+                old_name in self.nif_export.dict_block_names,
+                [k for k, v in self.nif_export.dict_names.items() if v == old_name]))
             while unique_name in self.nif_export.dict_block_names or unique_name in list(self.nif_export.dict_names.values()):
                 unique_name = "%s.%02d" % (old_name, unique_int)
                 unique_int += 1
+        NifLog.debug("[namedbg] get_unique_name: {0!r} ({1}) -> {2!r}".format(b_name, type(b_name).__name__, unique_name))
         self.nif_export.dict_block_names.append(unique_name)
         self.nif_export.dict_names[b_name] = unique_name
         return unique_name
@@ -486,9 +497,12 @@ class ObjectHelper:
         :param b_name:
         """
         try:
-            return self.nif_export.dict_names[b_name]
+            full_name = self.nif_export.dict_names[b_name]
         except KeyError:
             return self.get_unique_name(b_name)
+        NifLog.debug("[namedbg] get_full_name: {0!r} ({1}) found in dict_names -> {2!r}".format(
+            b_name, type(b_name).__name__, full_name))
+        return full_name
 
     def export_range_lod_data(self, n_node, b_obj):
         """Export range lod data for for the children of b_obj, as a
@@ -763,12 +777,20 @@ class MeshHelper:
                 else:
                     trishape.name = trishape_name
 
+                NifLog.debug("[namedbg] export_tri_shapes: b_obj={0!r} trishape_name arg={1!r} parent={2!r} "
+                             "base name={3!r} material slots={4} materialIndex={5}".format(
+                                 b_obj.name, trishape_name, parent_block.name if parent_block else None,
+                                 trishape.name, len(mesh_materials), materialIndex))
+
                 # multimaterial meshes: add material index
                 # (Morrowind's child naming convention)
                 if len(mesh_materials) > 1:
                     trishape.name = trishape.name.decode() + ":%i" % materialIndex
                 else:
                     trishape.name = self.nif_export.objecthelper.get_full_name(trishape.name)
+                NifLog.debug("[namedbg] export_tri_shapes: final trishape name={0!r} (via {1})".format(
+                    trishape.name,
+                    "material index suffix" if len(mesh_materials) > 1 else "get_full_name"))
 
             # Trishape Flags...
             if (b_obj.type == 'MESH') and (b_obj.niftools.objectflags != 0):

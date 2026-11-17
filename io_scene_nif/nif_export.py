@@ -648,6 +648,10 @@ class NifExport(NifCommon):
 
                 data = NifFormat.Data(version=self.version, user_version=self.user_version, user_version_2=self.user_version_2)
                 data.roots = [root_block]
+                # dump the names as they will be written, to catch renames after block creation
+                for block in root_block.tree():
+                    if isinstance(block, NifFormat.NiObjectNET):
+                        NifLog.debug("[namedbg] pre-write: {0} named {1!r}".format(block.__class__.__name__, block.name))
                 if NifOp.props.game == 'NEOSTEAM':
                     data.modification = "neosteam"
                 elif NifOp.props.game == 'ATLANTICA':
