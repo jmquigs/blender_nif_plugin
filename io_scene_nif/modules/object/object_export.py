@@ -496,6 +496,10 @@ class ObjectHelper:
         .. todo:: Refactor and simplify this code.
         :param b_name:
         """
+        # pyffi block names are bytes, but dict_names is keyed by str; without this a name read back
+        # from a block misses the lookup and then collides with its own entry in get_unique_name
+        if isinstance(b_name, bytes):
+            b_name = b_name.decode()
         try:
             full_name = self.nif_export.dict_names[b_name]
         except KeyError:
