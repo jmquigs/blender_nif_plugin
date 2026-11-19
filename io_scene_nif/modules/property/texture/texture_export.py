@@ -274,20 +274,9 @@ class TextureHelper:
                 texprop.bump_map_matrix.m_22 = 1.0
 
         if self.normal_mtex:
-            if NifOp.props.game in self.USED_EXTRA_SHADER_TEXTURES:
-                # shader texture slots are only allocated for these games
-                shadertexdesc = texprop.shader_textures[1]
-                shadertexdesc.is_used = True
-                shadertexdesc.texture_data.source = self.texture_writer.export_source_texture(texture=self.normal_mtex.texture)
-            elif self.nif_export.version >= 0x14020007:
-                texprop.has_normal_texture = True
-                self.texture_writer.export_tex_desc(texdesc=texprop.normal_texture,
-                                                    uvlayers=self.nif_export.dict_mesh_uvlayers,
-                                                    b_mat_texslot=self.normal_mtex)
-            else:
-                # e.g. Oblivion loads <base>_n.dds automatically; nothing to store in the nif
-                NifLog.warn("Normal map texture '%s' not exported: not supported in NiTexturingProperty for this game."
-                            % self.normal_mtex.texture.name)
+            shadertexdesc = texprop.shader_textures[1]
+            shadertexdesc.is_used = True
+            shadertexdesc.texture_data.source = self.texture_writer.export_source_texture(texture=self.normal_mtex.texture)
 
         if self.gloss_mtex:
             if NifOp.props.game not in self.USED_EXTRA_SHADER_TEXTURES:
