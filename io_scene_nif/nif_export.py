@@ -208,7 +208,11 @@ class NifExport(NifCommon):
                                                  "Workaround: apply size and rotation (CTRL-A) on '%s'." % b_obj.name)
 
             b_armature = armature.get_armature()
-            armature.set_bone_orientation(b_armature.data.niftools_armature.axis_forward, b_armature.data.niftools_armature.axis_up)
+            if b_armature:
+                armature.set_bone_orientation(b_armature.data.niftools_armature.axis_forward, b_armature.data.niftools_armature.axis_up)
+            else:
+                # no armature in the scene (e.g. static meshes, weapons); use the default orientation
+                armature.set_bone_orientation("X", "Y")
 
             root_name = filebase
             # get the root object from selected object
@@ -720,9 +724,9 @@ class NifExport(NifCommon):
                     kf_root.start_time = bpy.context.scene.frame_start * bpy.context.scene.render.fps
                     kf_root.stop_time = (bpy.context.scene.frame_end - bpy.context.scene.frame_start) * bpy.context.scene.render.fps
                     # quick hack to set correct target name
-                    if "Bip01" in b_armature.data.bones:
+                    if b_armature and "Bip01" in b_armature.data.bones:
                         targetname = "Bip01"
-                    elif "Bip02" in b_armature.data.bones:
+                    elif b_armature and "Bip02" in b_armature.data.bones:
                         targetname = "Bip02"
                     else:
                         targetname = root_block.name
