@@ -43,8 +43,13 @@ from pyffi.formats.nif import NifFormat
 
 from io_scene_nif.modules import armature
 from io_scene_nif.utility import nif_utils
+from io_scene_nif.utility import nif_tangent_space
 from io_scene_nif.utility.nif_global import NifOp
 from io_scene_nif.utility.nif_logging import NifLog
+
+# compute tangent space with numpy (nif_tangent_space) instead of pyffi's
+# much slower update_tangent_space; set to False to compare the two
+USE_NUMPY_TANGENTS = True
 
 # JMQTODO:
 # settings:
@@ -1173,6 +1178,34 @@ class MeshHelper:
                 tridata.consistency_flags = NifFormat.ConsistencyType.CT_STATIC
                 NifLog.warn("{0} has no consistency type set using default CT_STATIC.".format(b_obj))
 
+            # update tangent space (as binary extra data only for Oblivion)
+            # for extra shader texture games, only export it if those
+            # textures are actually exported (civ4 seems to be consistent with
+            # not using tangent space on non shadered nifs)
+            export_tangents = (mesh_uv_layers and mesh_hasnormals and (
+                NifOp.props.game in ('OBLIVION', 'FALLOUT_3', 'SKYRIM') or
+                NifOp.props.game in self.nif_export.texturehelper.USED_EXTRA_SHADER_TEXTURES))
+            # the numpy path takes the triangles from trilist, which is only
+            # what pyffi sees for NiTriShape (strips are re-triangulated);
+            # with 64+ uv layers the nif has no uv sets and pyffi bails out
+            numpy_tangents = None
+            export_normlist = normlist
+            if (export_tangents and USE_NUMPY_TANGENTS
+                    and isinstance(trishape, NifFormat.NiTriShape)
+                    and len(mesh_uv_layers) < 64):
+                uv_sets = nif_tangent_space.uv_sets_from_export_list(uvlist, len(mesh_uv_layers))
+                ts_stats = {}
+                tangents, bitangents, export_normlist = nif_tangent_space.compute_tangent_space(
+                    vertlist, normlist, uv_sets[0], trilist, hash_uvs=uv_sets,
+                    vcols=vcollist if mesh_hasvcol else None, stats=ts_stats)
+                # pyffi's update_tangent_space normalizes the normals in
+                # place, so write the normalized ones
+                export_normlist = export_normlist.tolist()
+                numpy_tangents = (tangents, bitangents)
+                if ts_stats['num_degenerate_groups']:
+                    NifLog.debug("{0}: {1} of {2} tangent space vertex groups are degenerate".format(
+                        trishape.name, ts_stats['num_degenerate_groups'], ts_stats['num_groups']))
+
             # data
             tridata.num_vertices = len(vertlist)
             tridata.has_vertices = True
@@ -1187,9 +1220,9 @@ class MeshHelper:
                 tridata.has_normals = True
                 tridata.normals.update_size()
                 for i, v in enumerate(tridata.normals):
-                    v.x = normlist[i][0]
-                    v.y = normlist[i][1]
-                    v.z = normlist[i][2]
+                    v.x = export_normlist[i][0]
+                    v.y = export_normlist[i][1]
+                    v.z = export_normlist[i][2]
 
             if mesh_hasvcol:
                 tridata.has_vertex_colors = True
@@ -1220,12 +1253,13 @@ class MeshHelper:
             tridata.set_triangles(trilist,
                                   stitchstrips=NifOp.props.stitch_strips)
 
-            # update tangent space (as binary extra data only for Oblivion)
-            # for extra shader texture games, only export it if those
-            # textures are actually exported (civ4 seems to be consistent with
-            # not using tangent space on non shadered nifs)
-            if mesh_uv_layers and mesh_hasnormals:
-                if NifOp.props.game in ('OBLIVION', 'FALLOUT_3', 'SKYRIM') or (NifOp.props.game in self.nif_export.texturehelper.USED_EXTRA_SHADER_TEXTURES):
+            # update tangent space (see export_tangents above)
+            if export_tangents:
+                if numpy_tangents is not None:
+                    nif_tangent_space.apply_tangent_space(
+                        trishape, numpy_tangents[0], numpy_tangents[1],
+                        as_extra=(NifOp.props.game == 'OBLIVION'))
+                else:
                     trishape.update_tangent_space(as_extra=(NifOp.props.game == 'OBLIVION'))
 
             # now export the vertex weights, if there are any
