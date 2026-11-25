@@ -236,7 +236,14 @@ class NifExport(NifCommon):
 
             # smooth seams of objects
             if NifOp.props.smooth_object_seams:
-                self.objecthelper.mesh_helper.smooth_mesh_seams(bpy.context.scene.objects)
+                export_meshes = []
+                stack = list(root_objects)
+                while stack:
+                    b_obj = stack.pop()
+                    if b_obj.type == 'MESH':
+                        export_meshes.append(b_obj)
+                    stack.extend(b_obj.children)
+                self.objecthelper.mesh_helper.smooth_mesh_seams(export_meshes)
 
             # TODO: use Blender actions for animation groups
             # check for animation groups definition in a text buffer 'Anim'
