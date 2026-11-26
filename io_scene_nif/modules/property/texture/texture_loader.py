@@ -98,8 +98,10 @@ class TextureLoader():
         
         b_text_name = os.path.basename(fn)
         if not b_image:
-            NifLog.warn("Texture '{0}' not found or not supported and no alternate available".format(fn))
+            # create a file-backed image pointing at the expected path, so it
+            # shows as a missing "Single Image" rather than a black generated one
             b_image = bpy.data.images.new(name=b_text_name, width=1, height=1, alpha=False)
+            b_image.source = 'FILE'
             b_image.filepath = fn
         
         # create a texture
